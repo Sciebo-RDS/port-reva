@@ -21,6 +21,9 @@ type WebServer struct {
 	revaClient *reva.Client
 }
 
+type endpointHandler = func(*RequestData, http.ResponseWriter, *http.Request) ([]byte, error)
+type endpointHandlers = map[string]endpointHandler
+
 func (svr *WebServer) initialize(port uint16, revaClient *reva.Client, log *zerolog.Logger) error {
 	if log == nil {
 		return errors.Errorf("no logger specified")
@@ -33,39 +36,57 @@ func (svr *WebServer) initialize(port uint16, revaClient *reva.Client, log *zero
 	svr.revaClient = revaClient
 
 	// Set up and start the HTTP server
-	http.HandleFunc("/file", svr.handleFileEndpoint)
-	http.HandleFunc("/folder", svr.handleFolderEndpoint)
+	http.HandleFunc("/file", func(w http.ResponseWriter, r *http.Request) {
+		svr.handleEndpoint(endpointHandlers{"GET": svr.handleFileGetRequest}, w, r)
+	})
+	http.HandleFunc("/folder", func(w http.ResponseWriter, r *http.Request) {
+		svr.handleEndpoint(endpointHandlers{"GET": svr.handleFolderGetRequest}, w, r)
+	})
 	go http.ListenAndServe(fmt.Sprintf(":%v", port), nil)
 
 	return nil
 }
 
-func (svr *WebServer) handleFileEndpoint(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case "GET":
-		svr.handleFileGetRequest(w, r)
+func (svr *WebServer) handleEndpoint(handlers endpointHandlers, w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 
-	default:
-		svr.log.Warn().Str("method", r.Method).Str("path", r.URL.Path).Msg("unsupported method")
+	var respData []byte
+	var err error
+
+	if handler, ok := handlers[r.Method]; ok {
+		if reqData, errUnmarshal := UnmarshalRequestData(r); errUnmarshal == nil {
+			respData, err = handler(&reqData, w, r)
+		} else {
+			err = errUnmarshal
+		}
+	} else {
+		err = errors.Errorf("unsupported method")
+	}
+
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+
+		errMsg := fmt.Sprintf("%v", err)
+		respData = []byte(errMsg)
+
+		svr.log.Warn().Str("method", r.Method).Str("path", r.URL.Path).Msg(errMsg)
+	}
+
+	if len(respData) > 0 {
+		_, _ = w.Write(respData)
 	}
 }
 
-func (svr *WebServer) handleFolderEndpoint(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case "GET":
-		svr.handleFolderGetRequest(w, r)
-
-	default:
-		svr.log.Warn().Str("method", r.Method).Str("path", r.URL.Path).Msg("unsupported method")
-	}
+func (svr *WebServer) handleFileGetRequest(reqData *RequestData, w http.ResponseWriter, r *http.Request) ([]byte, error) {
+	// TODO: Get data from Reva
+	fmt.Println(*reqData)
+	return []byte("file"), nil
 }
 
-func (svr *WebServer) handleFileGetRequest(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("file"))
-}
-
-func (svr *WebServer) handleFolderGetRequest(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("folder"))
+func (svr *WebServer) handleFolderGetRequest(reqData *RequestData, w http.ResponseWriter, r *http.Request) ([]byte, error) {
+	// TODO: Get data from Reva
+	fmt.Println(*reqData)
+	return []byte("folder"), nil
 }
 
 // New creates a new WebServer instance.

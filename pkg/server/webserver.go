@@ -5,6 +5,7 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -78,15 +79,38 @@ func (svr *WebServer) handleEndpoint(handlers endpointHandlers, w http.ResponseW
 }
 
 func (svr *WebServer) handleFileGetRequest(reqData *RequestData, w http.ResponseWriter, r *http.Request) ([]byte, error) {
-	// TODO: Get data from Reva
-	fmt.Println(*reqData)
-	return []byte("file"), nil
+	svr.logRequest("file contents request", reqData, r.RemoteAddr)
+
+	fileContents, err := svr.revaClient.DownloadFile(reqData.Metadata.FilePath)
+	if err != nil {
+		return nil, errors.Wrap(err, "error while retrieving file contents")
+	}
+	svr.log.Debug().Str("path", reqData.Metadata.FilePath).Int("size", len(fileContents)).Msg("retrieved file contents")
+
+	return fileContents, nil
 }
 
 func (svr *WebServer) handleFolderGetRequest(reqData *RequestData, w http.ResponseWriter, r *http.Request) ([]byte, error) {
-	// TODO: Get data from Reva
-	fmt.Println(*reqData)
-	return []byte("folder"), nil
+	svr.logRequest("folder contents request", reqData, r.RemoteAddr)
+
+	folderContents, err := svr.revaClient.ListFolder(reqData.Metadata.FilePath)
+	if err != nil {
+		return nil, errors.Wrap(err, "error while retrieving folder contents")
+	}
+	svr.log.Debug().Str("path", reqData.Metadata.FilePath).Int("count", len(folderContents)).Msg("retrieved folder contents")
+
+	reply := map[string][]string{"files": folderContents}
+	jsonData, _ := json.Marshal(reply)
+	return jsonData, nil
+}
+
+func (svr *WebServer) logRequest(msg string, reqData *RequestData, requester string) {
+	svr.log.Info().
+		Str("path", reqData.Metadata.FilePath).
+		Str("userId", reqData.Metadata.UserID).
+		Str("apiKey", reqData.Metadata.APIKey).
+		Str("requester", requester).
+		Msg(msg)
 }
 
 // New creates a new WebServer instance.

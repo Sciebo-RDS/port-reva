@@ -101,6 +101,6 @@ func verifyRuntimeConfig(cfg *runtime.Config, log *zerolog.Logger) {
 }
 
 func printWelcome() {
-	fmt.Println("Sciebo RDS <-> Reva connector -- V" + version.GetString())
+	fmt.Println("Sciebo RDS to Reva connector -- V" + version.GetString())
 	fmt.Println("------------------------------------------------------------")
 }

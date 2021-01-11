@@ -11,16 +11,28 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/Sciebo-RDS/port-reva/cmd/cmdline"
 	"github.com/Sciebo-RDS/port-reva/cmd/logger"
 	"github.com/Sciebo-RDS/port-reva/cmd/version"
 	"github.com/Sciebo-RDS/port-reva/pkg/runtime"
 )
 
+const (
+	portFlagName     = "port"
+	hostFlagName     = "host"
+	userFlagName     = "user"
+	passwordFlagName = "password"
+
+	hostEnvName     = "RDS_REVA_HOST"
+	userEnvName     = "RDS_REVA_USER"
+	passwordEnvName = "RDS_REVA_PASSWORD"
+)
+
 var (
-	portFlag = flag.Uint("port", 80, "the webserver port")
-	hostFlag = flag.String("host", "", "the Reva host (<host>:<port>)")
-	userFlag = flag.String("user", "", "the user name to log in to Reva")
-	passFlag = flag.String("pass", "", "the user password to log in to Reva")
+	portFlag     = flag.Uint(portFlagName, 80, "the webserver port")
+	hostFlag     = flag.String(hostFlagName, "", "the Reva host (<host>:<port>)")
+	userFlag     = flag.String(userFlagName, "", "the user name to log in to Reva")
+	passwordFlag = flag.String(passwordFlagName, "", "the user password to log in to Reva")
 )
 
 func main() {
@@ -51,10 +63,26 @@ func run(log *zerolog.Logger) {
 
 func getRuntimeConfig() runtime.Config {
 	cfg := runtime.Config{}
+
+	// Read settings from command-line
 	cfg.WebserverPort = uint16(*portFlag)
 	cfg.Reva.Host = *hostFlag
 	cfg.Reva.User = *userFlag
-	cfg.Reva.Password = *passFlag
+	cfg.Reva.Password = *passwordFlag
+
+	// Read (missing) settings from environment variables
+	setFromEnvironment := func(value *string, flagName string, envName string) {
+		if !cmdline.IsFlagSet(flagName) {
+			if val, ok := os.LookupEnv(envName); ok {
+				*value = val
+			}
+		}
+	}
+
+	setFromEnvironment(&cfg.Reva.Host, hostFlagName, hostEnvName)
+	setFromEnvironment(&cfg.Reva.User, userFlagName, userEnvName)
+	setFromEnvironment(&cfg.Reva.Password, passwordFlagName, passwordEnvName)
+
 	return cfg
 }
 

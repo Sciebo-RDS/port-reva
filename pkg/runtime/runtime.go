@@ -15,6 +15,7 @@ import (
 
 	"github.com/Sciebo-RDS/port-reva/pkg/reva"
 	"github.com/Sciebo-RDS/port-reva/pkg/server"
+	"github.com/Sciebo-RDS/port-reva/pkg/service"
 )
 
 // Runtime implements the main program runtime.
@@ -39,6 +40,10 @@ func (rt *Runtime) initialize(cfg Config, log *zerolog.Logger) error {
 
 	rt.conf = cfg
 
+	if err := rt.registerWithTokenStorage(); err != nil {
+		log.Warn().Err(err).Msg("unable to register connector with token storage")
+	}
+
 	client, err := reva.New(cfg.Reva.Host, cfg.Reva.User, cfg.Reva.Password, log)
 	if err != nil {
 		return errors.Wrap(err, "failed to create the Reva client")
@@ -58,6 +63,20 @@ func (rt *Runtime) initialize(cfg Config, log *zerolog.Logger) error {
 
 func (rt *Runtime) destroy() {
 
+}
+
+func (rt *Runtime) registerWithTokenStorage() error {
+	endpoint, ok := os.LookupEnv("CENTRAL_SERVICE_TOKEN_STORAGE")
+	if !ok {
+		return errors.Errorf("token storage endpoint not set")
+	}
+	endpoint += "/service"
+
+	if err := service.RegisterService(endpoint); err != nil {
+		return errors.Wrap(err, "unable to register service")
+	}
+
+	return nil
 }
 
 // Run starts the runtime's main loop.

@@ -6,7 +6,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 
 	"github.com/rs/zerolog"
@@ -37,9 +36,11 @@ var (
 
 func main() {
 	flag.Parse()
-	printWelcome()
 
-	run(logger.New())
+	log := logger.New()
+	printWelcome(log)
+
+	run(log)
 }
 
 func run(log *zerolog.Logger) {
@@ -100,7 +101,6 @@ func verifyRuntimeConfig(cfg *runtime.Config, log *zerolog.Logger) {
 	}
 }
 
-func printWelcome() {
-	fmt.Println("Sciebo RDS to Reva connector -- V" + version.GetString())
-	fmt.Println("------------------------------------------------------------")
+func printWelcome(log *zerolog.Logger) {
+	log.Info().Str("version", version.GetString()).Msg("Sciebo RDS to Reva connector")
 }

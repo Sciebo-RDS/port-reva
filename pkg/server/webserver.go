@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 
 	"github.com/Sciebo-RDS/port-reva/pkg/reva"
@@ -43,8 +44,11 @@ func (svr *WebServer) initialize(port uint16, revaClient *reva.Client, log *zero
 	http.HandleFunc("/folder", func(w http.ResponseWriter, r *http.Request) {
 		svr.handleEndpoint(endpointHandlers{"GET": svr.handleFolderGetRequest}, w, r)
 	})
-	go http.ListenAndServe(fmt.Sprintf(":%v", port), nil)
 
+	// Also serve Prometheus metrics for health checking etc.
+	http.Handle("/metrics", promhttp.Handler())
+
+	go http.ListenAndServe(fmt.Sprintf(":%v", port), nil)
 	return nil
 }
 

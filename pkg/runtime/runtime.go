@@ -40,10 +40,6 @@ func (rt *Runtime) initialize(cfg Config, log *zerolog.Logger) error {
 
 	rt.conf = cfg
 
-	if err := rt.registerWithTokenStorage(); err != nil {
-		log.Warn().Err(err).Msg("unable to register connector with token storage")
-	}
-
 	client, err := reva.New(cfg.Reva.Host, cfg.Reva.User, cfg.Reva.Password, log)
 	if err != nil {
 		return errors.Wrap(err, "failed to create the Reva client")
@@ -57,6 +53,11 @@ func (rt *Runtime) initialize(cfg Config, log *zerolog.Logger) error {
 	}
 	rt.webServer = svr
 	log.Info().Uint16("port", cfg.WebserverPort).Msg("webserver started")
+
+	// If all initialization went through, register the service with the token storage
+	if err := rt.registerWithTokenStorage(); err != nil {
+		log.Warn().Err(err).Msg("unable to register connector with token storage")
+	}
 
 	return nil
 }
@@ -91,8 +92,8 @@ loop:
 	for {
 		// Poll the stopSignal channel; if a signal was received, break the loop
 		select {
-		case <-stopSignal:
-			rt.log.Info().Msg("shutting down")
+		case c := <-stopSignal:
+			rt.log.Info().Msgf("shutting down (%v)", c.String())
 			break loop
 
 		default:

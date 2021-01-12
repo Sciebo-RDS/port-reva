@@ -43,13 +43,19 @@ func UnmarshalRequestData(r *http.Request) (RequestData, error) {
 	for key, val := range objects {
 		switch key {
 		case "filepath":
-			reqdata.Metadata.FilePath = val.(string)
+			if s, ok := val.(string); ok {
+				reqdata.Metadata.FilePath = s
+			}
 
 		case "userId":
-			reqdata.Metadata.UserID = val.(string)
+			if s, ok := val.(string); ok {
+				reqdata.Metadata.UserID = s
+			}
 
 		case "apiKey":
-			reqdata.Metadata.APIKey = val.(string)
+			if s, ok := val.(string); ok {
+				reqdata.Metadata.APIKey = s
+			}
 
 		default:
 			reqdata.Data[key] = val

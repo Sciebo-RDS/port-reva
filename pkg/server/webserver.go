@@ -38,10 +38,10 @@ func (svr *WebServer) initialize(port uint16, revaClient *reva.Client, log *zero
 	svr.revaClient = revaClient
 
 	// Set up and start the HTTP server
-	http.HandleFunc("/file", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/storage/file", func(w http.ResponseWriter, r *http.Request) {
 		svr.handleEndpoint(endpointHandlers{"GET": svr.handleFileGetRequest}, w, r)
 	})
-	http.HandleFunc("/folder", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/storage/folder", func(w http.ResponseWriter, r *http.Request) {
 		svr.handleEndpoint(endpointHandlers{"GET": svr.handleFolderGetRequest}, w, r)
 	})
 

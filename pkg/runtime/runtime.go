@@ -13,7 +13,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 
-	"github.com/Sciebo-RDS/port-reva/pkg/reva"
 	"github.com/Sciebo-RDS/port-reva/pkg/server"
 	"github.com/Sciebo-RDS/port-reva/pkg/service"
 )
@@ -24,8 +23,7 @@ type Runtime struct {
 
 	conf Config
 
-	revaClient *reva.Client
-	webServer  *server.WebServer
+	webServer *server.WebServer
 }
 
 const (
@@ -40,14 +38,7 @@ func (rt *Runtime) initialize(cfg Config, log *zerolog.Logger) error {
 
 	rt.conf = cfg
 
-	client, err := reva.New(cfg.Reva.Host, cfg.Reva.User, cfg.Reva.Password, log)
-	if err != nil {
-		return errors.Wrap(err, "failed to create the Reva client")
-	}
-	rt.revaClient = client
-	log.Info().Str("host", cfg.Reva.Host).Str("user", cfg.Reva.User).Msg("established Reva session")
-
-	svr, err := server.New(cfg.WebserverPort, rt.revaClient, log)
+	svr, err := server.New(cfg.WebserverPort, rt.conf.Reva, log)
 	if err != nil {
 		return errors.Wrap(err, "unable to create the web server")
 	}

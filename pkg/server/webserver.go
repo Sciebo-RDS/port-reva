@@ -20,22 +20,19 @@ import (
 type WebServer struct {
 	log *zerolog.Logger
 
-	revaClient *reva.Client
+	revaConfig reva.Config
 }
 
-type endpointHandler = func(*RequestData, http.ResponseWriter, *http.Request) ([]byte, error)
+type endpointHandler = func(*RequestData, *reva.Client, http.ResponseWriter, *http.Request) ([]byte, error)
 type endpointHandlers = map[string]endpointHandler
 
-func (svr *WebServer) initialize(port uint16, revaClient *reva.Client, log *zerolog.Logger) error {
+func (svr *WebServer) initialize(port uint16, revaConfig reva.Config, log *zerolog.Logger) error {
 	if log == nil {
 		return errors.Errorf("no logger specified")
 	}
 	svr.log = log
 
-	if revaClient == nil {
-		return errors.Errorf("no Reva client specified")
-	}
-	svr.revaClient = revaClient
+	svr.revaConfig = revaConfig
 
 	// Set up and start the HTTP server
 	http.HandleFunc("/storage/file", func(w http.ResponseWriter, r *http.Request) {
@@ -60,7 +57,12 @@ func (svr *WebServer) handleEndpoint(handlers endpointHandlers, w http.ResponseW
 
 	if handler, ok := handlers[r.Method]; ok {
 		if reqData, errUnmarshal := UnmarshalRequestData(r); errUnmarshal == nil {
-			respData, err = handler(&reqData, w, r)
+			// Found a handler, so create a Reva client used to handle the request
+			if client, errClient := svr.createRevaClient(); err == nil {
+				respData, err = handler(&reqData, client, w, r)
+			} else {
+				err = errClient
+			}
 		} else {
 			err = errUnmarshal
 		}
@@ -82,10 +84,10 @@ func (svr *WebServer) handleEndpoint(handlers endpointHandlers, w http.ResponseW
 	}
 }
 
-func (svr *WebServer) handleFileGetRequest(reqData *RequestData, w http.ResponseWriter, r *http.Request) ([]byte, error) {
+func (svr *WebServer) handleFileGetRequest(reqData *RequestData, revaClient *reva.Client, w http.ResponseWriter, r *http.Request) ([]byte, error) {
 	svr.logRequest("file contents request", reqData, r.RemoteAddr)
 
-	fileContents, err := svr.revaClient.DownloadFile(reqData.Metadata.FilePath)
+	fileContents, err := revaClient.DownloadFile(reqData.Metadata.FilePath)
 	if err != nil {
 		return nil, errors.Wrap(err, "error while retrieving file contents")
 	}
@@ -94,10 +96,10 @@ func (svr *WebServer) handleFileGetRequest(reqData *RequestData, w http.Response
 	return fileContents, nil
 }
 
-func (svr *WebServer) handleFolderGetRequest(reqData *RequestData, w http.ResponseWriter, r *http.Request) ([]byte, error) {
+func (svr *WebServer) handleFolderGetRequest(reqData *RequestData, revaClient *reva.Client, w http.ResponseWriter, r *http.Request) ([]byte, error) {
 	svr.logRequest("folder contents request", reqData, r.RemoteAddr)
 
-	folderContents, err := svr.revaClient.ListFolder(reqData.Metadata.FilePath)
+	folderContents, err := revaClient.ListFolder(reqData.Metadata.FilePath)
 	if err != nil {
 		return nil, errors.Wrap(err, "error while retrieving folder contents")
 	}
@@ -106,6 +108,16 @@ func (svr *WebServer) handleFolderGetRequest(reqData *RequestData, w http.Respon
 	reply := map[string][]string{"files": folderContents}
 	jsonData, _ := json.Marshal(reply)
 	return jsonData, nil
+}
+
+func (svr *WebServer) createRevaClient() (*reva.Client, error) {
+	client, err := reva.New(svr.revaConfig.Host, svr.revaConfig.User, svr.revaConfig.Password, svr.log)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create the Reva client")
+	}
+	svr.log.Debug().Str("host", svr.revaConfig.Host).Str("user", svr.revaConfig.User).Msg("established Reva session")
+	return client, nil
+
 }
 
 func (svr *WebServer) logRequest(msg string, reqData *RequestData, requester string) {
@@ -118,9 +130,9 @@ func (svr *WebServer) logRequest(msg string, reqData *RequestData, requester str
 }
 
 // New creates a new WebServer instance.
-func New(port uint16, revaClient *reva.Client, log *zerolog.Logger) (*WebServer, error) {
+func New(port uint16, revaConfig reva.Config, log *zerolog.Logger) (*WebServer, error) {
 	svr := &WebServer{}
-	if err := svr.initialize(port, revaClient, log); err != nil {
+	if err := svr.initialize(port, revaConfig, log); err != nil {
 		return nil, errors.Wrap(err, "unable to initialize the web server")
 	}
 	return svr, nil

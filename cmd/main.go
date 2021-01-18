@@ -47,6 +47,7 @@ func run(log *zerolog.Logger) {
 	host, _ := os.Hostname()
 	log.Info().Msgf("hostname: %s", host)
 	log.Info().Msgf("webserver port: %v", *portFlag)
+	log.Info().Msgf("Reva host: %v", *hostFlag)
 
 	cfg := getRuntimeConfig()
 	verifyRuntimeConfig(&cfg, log)

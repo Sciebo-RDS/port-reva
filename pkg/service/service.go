@@ -16,7 +16,16 @@ import (
 // RegisterService registers this service with the provided token storage given by endpoint.
 func RegisterService(endpoint string) error {
 	// Send service registration request via POST
-	jsonData := `{"servicename": "reva", "implements": ["fileStorage"]}`
+	jsonData := `{
+		"servicename": "reva",
+		"implements": ["fileStorage"],
+		"fileTransferMode": 0,
+		"fileTransferArchive": 0,
+		"credentials": {
+			"userId": true,
+			"password": true
+		}
+	}`
 	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer([]byte(jsonData)))
 	if err != nil {
 		return errors.Wrap(err, "unable to create HTTP POST request")

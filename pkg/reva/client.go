@@ -40,7 +40,7 @@ func (cl *Client) initialize(host string, username string, password string, log 
 	}
 
 	if err := session.BasicLogin(username, password); err != nil {
-		return errors.Wrapf(err, "unable to login (u=%v, p=%v)", username, password)
+		return errors.Wrapf(err, "unable to login (u=%v)", username)
 	}
 
 	return nil

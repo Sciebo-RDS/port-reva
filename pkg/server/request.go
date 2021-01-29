@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"regexp"
 
 	"github.com/pkg/errors"
 )
@@ -63,4 +64,25 @@ func UnmarshalRequestData(r *http.Request) (RequestData, error) {
 	}
 
 	return reqdata, nil
+}
+
+// ParseUserID parses the user id of a RequestData object.
+func ParseUserID(userId string) (string, string, error) {
+	re := regexp.MustCompile(`^(\S+):\/\/(\S+?):(\S+)$`)
+	if matches := re.FindStringSubmatch(userId); len(matches) == 4 { // 1+3 groups, the first one being internal
+		proto := matches[1]
+		user := matches[2]
+		pwd := matches[3]
+
+		if proto != "reva" {
+			return "", "", errors.Errorf("expected protocol 'reva', but got '%v'", proto)
+		}
+		if len(user) == 0 || len(pwd) == 0 {
+			return "", "", errors.Errorf("incomplete user id")
+		}
+
+		return user, pwd, nil
+	}
+
+	return "", "", errors.Errorf("malformed user id")
 }

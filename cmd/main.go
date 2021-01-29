@@ -92,14 +92,6 @@ func verifyRuntimeConfig(cfg *runtime.Config, log *zerolog.Logger) {
 	if cfg.Reva.Host == "" {
 		log.Fatal().Msg("no Reva host specified")
 	}
-
-	if cfg.Reva.User == "" {
-		log.Fatal().Msg("no Reva user specified")
-	}
-
-	if cfg.Reva.Password == "" {
-		log.Fatal().Msg("no Reva password specified")
-	}
 }
 
 func printWelcome(log *zerolog.Logger) {

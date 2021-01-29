@@ -58,7 +58,7 @@ func (svr *WebServer) handleEndpoint(handlers endpointHandlers, w http.ResponseW
 	if handler, ok := handlers[r.Method]; ok {
 		if reqData, errUnmarshal := UnmarshalRequestData(r); errUnmarshal == nil {
 			// Found a handler, so create a Reva client used to handle the request
-			if client, errClient := svr.createRevaClient(); err == nil {
+			if client, errClient := svr.createRevaClient(&reqData); errClient == nil {
 				respData, err = handler(&reqData, client, w, r)
 			} else {
 				err = errClient
@@ -110,14 +110,40 @@ func (svr *WebServer) handleFolderGetRequest(reqData *RequestData, revaClient *r
 	return jsonData, nil
 }
 
-func (svr *WebServer) createRevaClient() (*reva.Client, error) {
-	client, err := reva.New(svr.revaConfig.Host, svr.revaConfig.User, svr.revaConfig.Password, svr.log)
+func (svr *WebServer) createRevaClient(reqData *RequestData) (*reva.Client, error) {
+	user, password, err := svr.getRevaCredentials(reqData)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get Reva credentials")
+	}
+
+	client, err := reva.New(svr.revaConfig.Host, user, password, svr.log)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create the Reva client")
 	}
 	svr.log.Debug().Str("host", svr.revaConfig.Host).Str("user", svr.revaConfig.User).Msg("established Reva session")
 	return client, nil
 
+}
+
+func (svr *WebServer) getRevaCredentials(reqData *RequestData) (string, string, error) {
+	user := svr.revaConfig.User
+	password := svr.revaConfig.Password
+
+	// If a user id was provided, try parsing it
+	if len(reqData.Metadata.UserID) > 0 {
+		if u, p, err := ParseUserID(reqData.Metadata.UserID); err == nil {
+			user = u
+			password = p
+		} else {
+			return "", "", errors.Wrap(err, "unable to parse the user id")
+		}
+	}
+
+	if len(user) == 0 || len(password) == 0 {
+		return "", "", errors.Errorf("username or password not specified")
+	}
+
+	return user, password, nil
 }
 
 func (svr *WebServer) logRequest(msg string, reqData *RequestData, requester string) {

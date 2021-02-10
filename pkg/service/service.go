@@ -17,7 +17,7 @@ import (
 func RegisterService(endpoint string) error {
 	// Send service registration request via POST
 	jsonData := `{
-		"servicename": "reva",
+		"servicename": "port-reva",
 		"implements": ["fileStorage"],
 		"fileTransferMode": 0,
 		"fileTransferArchive": 0,

@@ -74,8 +74,8 @@ func ParseUserID(userId string) (string, string, error) {
 		user := matches[2]
 		pwd := matches[3]
 
-		if proto != "reva" {
-			return "", "", errors.Errorf("expected protocol 'reva', but got '%v'", proto)
+		if proto != "port-reva" {
+			return "", "", errors.Errorf("expected protocol 'port-reva', but got '%v'", proto)
 		}
 		if len(user) == 0 || len(pwd) == 0 {
 			return "", "", errors.Errorf("incomplete user id")

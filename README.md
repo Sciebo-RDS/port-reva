@@ -1,5 +1,6 @@
 # Sciebo RDS to Reva connector
 This connector allows Sciebo RDS to talk to Reva through the CS3APIs.
+Implements this interface: https://github.com/Sciebo-RDS/Sciebo-RDS/blob/master/RDS/circle2_use_cases/interface_port_file_storage.yml
 
 ## Configuration
 The connector can be configured via command-line and/or environment variables:
